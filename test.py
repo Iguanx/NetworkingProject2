@@ -84,11 +84,15 @@ def main():
                     response = client_socket.recv(1024).decode('utf-8')
                     #The following line of code is for easy debugging purposes
                     #print(f"Server response: \n{response}")
+                    while "User already exists:"in response:
+                        print("Username " + username + " is taken, please try another")
+                        username = input("Enter a username: ")
+                        client_socket.sendall(("%connect " + username + "\n").encode('utf-8'))
+                        response = client_socket.recv(1024).decode('utf-8')
+                    #Check for correct after we've checked the username so we still get "Connected"
                     #Responses for if username is good, or if it already exists on the server
                     if "Message received: %connect" in response:
                         print("Connected to server with username " + username)
-                    if "User already exists:"in response:
-                        print("Username " + username + " is taken, please try another")
                 except ConnectionError as e:
                     print(f"Connection error: {e}")
                     errorRaised = True
