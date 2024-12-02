@@ -58,9 +58,15 @@ def main():
             print("\t%post\n")
             print("\t%message\n")
             print("\t%leave\n")
+            print(("\t%groups\n"))
+            print(("\t%groupjoin\n"))
+            print(("\t%grouppost\n"))
+            print(("\t%groupusers\n"))
+            print(("\t%groupleave\n"))
+            print(("\t%groupmessage\n"))
         cmnd = input("Enter a command: ")
         #Def a more efficient way to do this, but check to see if command is valid
-        while (cmnd != "%connect" and cmnd != "%exit" and cmnd != "%identify" and cmnd != "%join" and cmnd != "%leave" and cmnd != "%users" and cmnd != "%post" and cmnd != "%message"):
+        while (cmnd != "%connect" and cmnd != "%exit" and cmnd != "%identify" and cmnd != "%join" and cmnd != "%leave" and cmnd != "%users" and cmnd != "%post" and cmnd != "%message" and cmnd != "%groups" and cmnd != "%groupjoin" and cmnd != "%grouppost" and cmnd != "%groupusers" and cmnd != "%groupleave" and cmnd != "%groupmessage"):
                 if (cmnd == ""):
                     cmnd = input("Enter a command: ")
                 else:
@@ -196,6 +202,59 @@ def main():
                 messageNum = get_positive_integer("Message ID")
                 client_socket.sendall(("%message " + str(messageNum) + "\n").encode('utf-8'))
                 wait(1)
+        if cmnd == "%groups":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                client_socket.sendall(("%groups\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupjoin":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                client_socket.sendall((f"%groupjoin {group}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupusers":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                client_socket.sendall((f"%groupusers {group}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%grouppost":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                messageSubject = input("Enter message subject: ")
+                while not messageSubject:
+                    messageSubject = input("Please enter a valid message subject: ")
+                messageContent = input("Enter message content: ")
+                while not messageContent:
+                    messageContent = input("Please enter a valid message content: ")
+
+                time = datetime.now()
+                messageTime = time.strftime("%x %X")  # Include both date and time
+                client_socket.sendall((f"%grouppost {group}||{username}||{messageTime}||{messageSubject}||{messageContent}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupleave":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                client_socket.sendall((f"%groupleave {group}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupmessage":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                messageID = get_positive_integer("Enter message ID")
+                client_socket.sendall((f"%groupmessage {group} {messageID}\n").encode('utf-8'))
+                wait(1)
+
+
 
 if __name__ == "__main__":
     main()
