@@ -156,7 +156,7 @@ public class Server {
                     messageList.add(msg);
                     for (Socket client : PublicClients) {
                         PrintWriter output1 = new PrintWriter(client.getOutputStream(), true);
-                        output1.println("New message!\n~~~~~~~~~~~~~~~~~~~~~~\nMessage ID: " + Integer.toString(messageID) + "\nSender: " + messageArray[1] + "\nDate: " + messageArray[2] + "\nSubject: " + messageArray[3] + "\nContent: " + messageArray[4] + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                        output1.println("New message!\n~~~~~~~~~~~~~~~~~~~~~~\nMessage ID: " + Integer.toString(messageID) + "\nSender: " + messageArray[1] + "\nDate: " + messageArray[2] + "\nSubject: " + messageArray[3] + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
                     }
                 }
                 if (message.startsWith("%message")) {
