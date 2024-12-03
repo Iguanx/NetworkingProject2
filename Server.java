@@ -1,5 +1,6 @@
 /*
 Network Project 2
+Connor, Nikita, Dominic
 Changing stuff here too
 Adding another line here as well
 */
@@ -15,6 +16,16 @@ public class Server {
     private static final List<String> userIDsPublic = new CopyOnWriteArrayList<>();
     private static final List<String> userIDsServer = new CopyOnWriteArrayList<>();
     private static final List<Message> messageList = new CopyOnWriteArrayList<>();
+    private static final List<Group> groups = new CopyOnWriteArrayList<>();
+
+    static {
+        groups.add(new Group("Group1"));
+        groups.add(new Group("Group2"));
+        groups.add(new Group("Group3"));
+        groups.add(new Group("Group4"));
+        groups.add(new Group("Group5"));
+    }
+
     public static void main(String[] args) {
         int port = 6789; // Port to listen on
 
@@ -169,6 +180,227 @@ public class Server {
                         output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nMessage ID: " + messageList.get(index).getMessageID() + "\nSender: " + messageList.get(index).getSender() + "\nDate: " + messageList.get(index).getDate() + "\nSubject: " + messageList.get(index).getSubject() + "\nContent: " + messageList.get(index).getContent() + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
                     }
                 }
+
+                if (message.startsWith("%groups")) {
+                    StringBuilder response = new StringBuilder("Available groups:");
+                    for (int i = 0; i < groups.size(); i++) {
+                        response.append("\n").append(i + 1).append(". ").append(groups.get(i).getGroupName());
+                    }
+                    output.println(response.toString());
+                }
+    
+                // Command to join a specific group by name or ID
+                if (message.startsWith("%groupjoin")) {
+                    // Split the message into the command and group identifier
+                    String[] splitMessage = message.split("\\s+");
+                    if (splitMessage.length < 2) {
+                        output.println("Usage: %groupjoin <groupID/groupName>");
+                        continue;
+                    }
+                
+                    String groupIdentifier = splitMessage[1];
+                    Group targetGroup = findGroupByIdentifier(groupIdentifier);
+                
+                    if (targetGroup == null) {
+                        // Group not found
+                        output.println("Group not found: " + groupIdentifier);
+                    } else {
+                        synchronized (targetGroup) {
+                            String username = userIDsServer.get(connectedClients.indexOf(clientSocket));
+                
+                            // Check if the user is already in the group
+                            if (targetGroup.getUserIDs().contains(username)) {
+                                output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nYou are already a member of group: " 
+                                        + targetGroup.getGroupName() + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                            } else {
+                                // Add the user to the group's user list and socket list
+                                targetGroup.getUserIDs().add(username);
+                                targetGroup.getGroupClients().add(clientSocket);
+                
+                                output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nSuccessfully joined group: " 
+                                        + targetGroup.getGroupName() + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                
+                                // Notify other members of the group
+                                for (Socket client : targetGroup.getGroupClients()) {
+                                    if (client != clientSocket) { // Avoid notifying the joining client
+                                        try {
+                                            PrintWriter groupOutput = new PrintWriter(client.getOutputStream(), true);
+                                            groupOutput.println("\n~~~~~~~~~~~~~~~~~~~~~~\nUser " + username 
+                                                    + " has joined group: " + targetGroup.getGroupName() + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                                        } catch (IOException e) {
+                                            System.err.println("Error notifying client: " + e.getMessage());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (message.startsWith("%groupusers")) {
+                    String[] inArray = message.split("\\s+");
+                    if (inArray.length < 2) {
+                        output.println("Usage: %groupusers <groupID/groupName>");
+                        continue;
+                    }
+                
+                    String groupIdentifier = inArray[1];
+                    Group targetGroup = findGroupByIdentifier(groupIdentifier);
+                
+                    if (targetGroup == null) {
+                        output.println("Group not found: " + groupIdentifier);
+                    } else {
+                        String username = userIDsServer.get(connectedClients.indexOf(clientSocket));
+                        if (!isUserInGroup(username, targetGroup)) {
+                            output.println("You are not a member of group: " + targetGroup.getGroupName());
+                        } else {
+                            List<String> userIDs = targetGroup.getUserIDs();
+                            if (userIDs.isEmpty()) {
+                                output.println("No users currently in group: " + groupIdentifier);
+                            } else {
+                                String IDlist = String.join(", ", userIDs);
+                                output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nUsers in group " + groupIdentifier + ": " + IDlist + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                            }
+                        }
+                    }
+                }
+                
+                
+                if (message.startsWith("%grouppost")) {
+                    String[] messageArray = message.split("\\|\\|");
+                    if (messageArray.length < 5) {
+                        output.println("Usage: %grouppost <groupID/groupName>||<username>||<timestamp>||<subject>||<content>");
+                        continue;
+                    }
+                
+                    String groupIdentifier = messageArray[0].split("\\s+")[1];
+                    String sender = messageArray[1];
+                    String timestamp = messageArray[2];
+                    String subject = messageArray[3];
+                    String content = messageArray[4];
+                
+                    Group targetGroup = findGroupByIdentifier(groupIdentifier);
+                    if (targetGroup == null) {
+                        output.println("Group not found: " + groupIdentifier);
+                    } else if (!isUserInGroup(sender, targetGroup)) {
+                        output.println("You are not a member of group: " + targetGroup.getGroupName());
+                    } else {
+                        synchronized (targetGroup) {
+                            int messageID = targetGroup.getGroupMessages().size() + 1;
+                            Message newMessage = new Message(Integer.toString(messageID), sender, timestamp, subject, content);
+                            targetGroup.getGroupMessages().add(newMessage);
+                
+                            for (Socket client : targetGroup.getGroupClients()) {
+                                try {
+                                    PrintWriter groupOutput = new PrintWriter(client.getOutputStream(), true);
+                                    groupOutput.println("New message in group " + targetGroup.getGroupName() + ":\n"
+                                            + "~~~~~~~~~~~~~~~~~~~~~~\nMessage ID: " + messageID + "\nSender: " + sender
+                                            + "\nDate: " + timestamp + "\nSubject: " + subject
+                                            + "\nContent: " + content + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                                } catch (IOException e) {
+                                    System.err.println("Error notifying client: " + e.getMessage());
+                                }
+                            }
+                        }
+                        output.println("Message successfully posted to group " + targetGroup.getGroupName());
+                    }
+                }
+                
+                
+                if (message.startsWith("%groupleave")) {
+                    String[] splitMessage = message.split("\\s+", 2);
+                    if (splitMessage.length < 2) {
+                        output.println("Usage: %groupleave <groupID/groupName>");
+                        continue;
+                    }
+                
+                    String groupIdentifier = splitMessage[1];
+                    Group targetGroup = findGroupByIdentifier(groupIdentifier);
+                
+                    if (targetGroup == null) {
+                        output.println("Group not found: " + groupIdentifier);
+                    } else {
+                        String username = userIDsServer.get(connectedClients.indexOf(clientSocket));
+                        if (!isUserInGroup(username, targetGroup)) {
+                            output.println("You are not a member of group: " + targetGroup.getGroupName());
+                        } else {
+                            synchronized (targetGroup) {
+                                targetGroup.getUserIDs().remove(username);
+                                targetGroup.getGroupClients().remove(clientSocket);
+                
+                                output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nYou have successfully left group: "
+                                        + targetGroup.getGroupName() + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                
+                                for (Socket client : targetGroup.getGroupClients()) {
+                                    try {
+                                        PrintWriter groupOutput = new PrintWriter(client.getOutputStream(), true);
+                                        groupOutput.println("\n~~~~~~~~~~~~~~~~~~~~~~\nUser " + username
+                                                + " has left group: " + targetGroup.getGroupName() + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                                    } catch (IOException e) {
+                                        System.err.println("Error notifying client: " + e.getMessage());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                
+                if (message.startsWith("%groupmessage")) {
+                    String[] splitMessage = message.split("\\s+", 3);
+                    if (splitMessage.length < 3) {
+                        output.println("Usage: %groupmessage <groupID/groupName> <messageID>");
+                        continue;
+                    }
+                
+                    String groupIdentifier = splitMessage[1];
+                    int messageID;
+                    try {
+                        messageID = Integer.parseInt(splitMessage[2]);
+                    } catch (NumberFormatException e) {
+                        output.println("Invalid message ID. Please enter a numeric value.");
+                        continue;
+                    }
+                
+                    Group targetGroup = findGroupByIdentifier(groupIdentifier);
+                    if (targetGroup == null) {
+                        output.println("Group not found: " + groupIdentifier);
+                    } else if (!isUserInGroup(userIDsServer.get(connectedClients.indexOf(clientSocket)), targetGroup)) {
+                        output.println("You are not a member of group: " + targetGroup.getGroupName());
+                    } else {
+                        synchronized (targetGroup) {
+                            if (messageID > 0 && messageID <= targetGroup.getGroupMessages().size()) {
+                                Message msg = targetGroup.getGroupMessages().get(messageID - 1);
+                                output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nMessage ID: " + msg.getMessageID()
+                                        + "\nSender: " + msg.getSender()
+                                        + "\nDate: " + msg.getDate()
+                                        + "\nSubject: " + msg.getSubject()
+                                        + "\nContent: " + msg.getContent()
+                                        + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                            } else {
+                                output.println("No message with ID " + messageID + " found in group " + groupIdentifier);
+                            }
+                        }
+                    }
+                }
+                if (message.startsWith("%grouplist")) {
+                    String username = userIDsServer.get(connectedClients.indexOf(clientSocket));
+                    StringBuilder response = new StringBuilder("Groups you are part of:");
+                
+                    boolean isInAnyGroup = false;
+                    for (Group group : groups) {
+                        if (group.getUserIDs().contains(username)) {
+                            isInAnyGroup = true;
+                            response.append("\n").append(group.getGroupName());
+                        }
+                    }
+                
+                    if (!isInAnyGroup) {
+                        output.println("You are not part of any groups.");
+                    } else {
+                        output.println(response.toString());
+                    }
+                }                
+                           
             }
             
         } catch (IOException e) {
@@ -217,4 +449,26 @@ public class Server {
 
         return result.toString();
     }
+
+    private static Group findGroupByIdentifier(String identifier) {
+        try {
+            int groupIndex = Integer.parseInt(identifier) - 1;
+            if (groupIndex >= 0 && groupIndex < groups.size()) {
+                return groups.get(groupIndex);
+            }
+        } catch (NumberFormatException e) {
+            for (Group group : groups) {
+                if (group.getGroupName().equalsIgnoreCase(identifier)) {
+                    return group;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isUserInGroup(String username, Group group) {
+        return group.getUserIDs().contains(username);
+    }
+    
+    
 }

@@ -1,5 +1,6 @@
 """
 Computer Networks Project 2
+Dominic, Nikita, Connor
 """
 
 import socket
@@ -8,7 +9,9 @@ from datetime import datetime, timedelta
 
 def listen_to_server(client_socket):
     """
-    Continuously listen for incoming messages from the server.
+    @brief  Continuously listen for incoming messages from the server.
+
+    @param client_socket(socket): client socket
     """
     try:
         while True:
@@ -24,6 +27,11 @@ def listen_to_server(client_socket):
         client_socket.close()
 
 def wait(s):
+    """
+    @brief  Adds delay
+
+    @param s(int): seconds
+    """
     delay = timedelta(seconds=s)
     endtime = datetime.now() + delay
     while datetime.now() < endtime:
@@ -31,6 +39,13 @@ def wait(s):
 
 #This function is mainly used when collecting port input
 def get_positive_integer(Value):
+        """
+        @brief   checks user input for a positive integer
+
+        @param  Value(int)  int to be checked
+
+        @return integer
+        """
         while True:
             user_input = input(Value + ": ")
             if user_input.isdigit():  # Check if the input is composed of digits
@@ -38,30 +53,82 @@ def get_positive_integer(Value):
                 if number > 0:  # Check if the number is positive
                     return number
             print("Invalid " + Value.lower() + ". Make sure to enter a positive integer.")
+
+#Shows all the commands, for readability and the %help command
+def show_available_commands(connected, inGroup):
+    """
+    @brief  Display available commands with a more user-friendly UI.
+    """
+    print("\n==================== AVAILABLE COMMANDS ====================\n")
+    print("General Commands:")
+    print("  %help       - Show all available commands")
+    print("  %exit       - Exit the application")
+    
+    if not connected:
+        print("\nConnection Commands:")
+        print("  %connect    - Connect to the server")
+    elif connected and not inGroup:
+        print("\nUser Commands:")
+        print("  %identify   - Identify the Server")
+        print("  %join       - Join the public group")
+    else:
+        print("\nUser Commands:")
+        print("  %identify   - Identify the Server")
+        print("  %users      - List all users")
+        print("  %post       - Post a message")
+        print("  %message    - View a message")
+        print("  %leave      - Leave the public group")
+
+        print("\nGroup Commands:")
+        print("  %groups     - List all private groups")
+        print("  %grouplist  - Lists all groups you're currently in")
+        print("  %groupjoin  - Join a specific group")
+        print("  %grouppost  - Post a message to a group")
+        print("  %groupusers - List users in the specific group")
+        print("  %groupleave - Leave the specific group")
+        print("  %groupmessage - View a message in the specific group")
+
+    print("\n===========================================================")
+
+
+#This returns a list of all the commands available so that we can loop through them
+def get_available_commands(connected, inGroup):
+    """
+    @brief  Return a list of available commands based on connection and group status.
+    """
+    commands = ["%help", "%exit"]
+    
+    if not connected:
+        commands.append("%connect")
+    elif connected and not inGroup:
+        commands.extend(["%identify", "%join"])
+    else:
+        commands.extend([
+            "%identify", "%users", "%post", "%message", "%leave", 
+            "%groups", "%groupjoin", "%grouppost", "%groupusers", 
+            "%groupleave", "%groupmessage", "%grouplist"
+        ])
+    
+    return commands
+
 def main():
+    """
+    @brief  Main function
+    """
     connected=False
     inGroup=False
     username = ""
     firstConnection = True
+    show_available_commands(connected, inGroup)
     while(True):
         #Request user to input a command, all of which start with %
-        print("Available commands:\n")
-        print("\t%exit\n")
-        if not connected:
-            print("\t%connect\n")
-        elif connected and not inGroup:
-            print("\t%identify\n")
-            print("\t%join\n")
-        else:
-            print("\t%identify\n")
-            print("\t%users\n")
-            print("\t%post\n")
-            print("\t%message\n")
-            print("\t%leave\n")
+        available_commands = get_available_commands(connected, inGroup)
+        print("\n-- %help for list of available commands --")
         cmnd = input("Enter a command: ")
         #Def a more efficient way to do this, but check to see if command is valid
-        while (cmnd != "%connect" and cmnd != "%exit" and cmnd != "%identify" and cmnd != "%join" and cmnd != "%leave" and cmnd != "%users" and cmnd != "%post" and cmnd != "%message"):
+        while cmnd not in available_commands:
                 if (cmnd == ""):
+                    print("-- %help for list of available commands --")
                     cmnd = input("Enter a command: ")
                 else:
                     cmnd = input("Command not recognized. Please enter a valid command: ")
@@ -84,11 +151,15 @@ def main():
                     response = client_socket.recv(1024).decode('utf-8')
                     #The following line of code is for easy debugging purposes
                     #print(f"Server response: \n{response}")
+                    while "User already exists:"in response:
+                        print("Username " + username + " is taken, please try another")
+                        username = input("Enter a username: ")
+                        client_socket.sendall(("%connect " + username + "\n").encode('utf-8'))
+                        response = client_socket.recv(1024).decode('utf-8')
+                    #Check for correct after we've checked the username so we still get "Connected"
                     #Responses for if username is good, or if it already exists on the server
                     if "Message received: %connect" in response:
                         print("Connected to server with username " + username)
-                    if "User already exists:"in response:
-                        print("Username " + username + " is taken, please try another")
                 except ConnectionError as e:
                     print(f"Connection error: {e}")
                     errorRaised = True
@@ -98,6 +169,10 @@ def main():
         #Message for when user inputs connect command but is already connected
         elif (cmnd == "%connect" and connected):
             print("Already connected to a server. Use %exit if you wish to disconnect.")
+
+        #Help command since we don't want every command showing all the time
+        if (cmnd == "%help"):
+            show_available_commands(connected, inGroup)
         #Command for when user wants to depart entirely from the program
         if (cmnd == "%exit"):
             #If actively in a group, leave the group and disconnect from server
@@ -192,6 +267,65 @@ def main():
                 messageNum = get_positive_integer("Message ID")
                 client_socket.sendall(("%message " + str(messageNum) + "\n").encode('utf-8'))
                 wait(1)
+        if cmnd == "%groups":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                client_socket.sendall(("%groups\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupjoin":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                client_socket.sendall((f"%groupjoin {group}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupusers":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                client_socket.sendall((f"%groupusers {group}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%grouppost":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                messageSubject = input("Enter message subject: ")
+                while not messageSubject:
+                    messageSubject = input("Please enter a valid message subject: ")
+                messageContent = input("Enter message content: ")
+                while not messageContent:
+                    messageContent = input("Please enter a valid message content: ")
+
+                time = datetime.now()
+                messageTime = time.strftime("%x %X")  # Include both date and time
+                client_socket.sendall((f"%grouppost {group}||{username}||{messageTime}||{messageSubject}||{messageContent}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupleave":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                client_socket.sendall((f"%groupleave {group}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%groupmessage":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                group = input("Enter group ID or name: ")
+                messageID = get_positive_integer("Enter message ID")
+                client_socket.sendall((f"%groupmessage {group} {messageID}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%grouplist":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                client_socket.sendall(b"%grouplist\n")
+                wait(1)
+
+
 
 if __name__ == "__main__":
     main()
