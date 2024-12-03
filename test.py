@@ -38,36 +38,74 @@ def get_positive_integer(Value):
                 if number > 0:  # Check if the number is positive
                     return number
             print("Invalid " + Value.lower() + ". Make sure to enter a positive integer.")
+
+#Shows all the commands, for readability and the %help command
+def show_available_commands(connected, inGroup):
+    """Display available commands with a more user-friendly UI."""
+    print("\n==================== AVAILABLE COMMANDS ====================\n")
+    print("General Commands:")
+    print("  %help       - Show all available commands")
+    print("  %exit       - Exit the application")
+    
+    if not connected:
+        print("\nConnection Commands:")
+        print("  %connect    - Connect to the server")
+    elif connected and not inGroup:
+        print("\nUser Commands:")
+        print("  %identify   - Identify the Server")
+        print("  %join       - Join the public group")
+    else:
+        print("\nUser Commands:")
+        print("  %identify   - Identify the Server")
+        print("  %users      - List all users")
+        print("  %post       - Post a message")
+        print("  %message    - View a message")
+        print("  %leave      - Leave the public group")
+
+        print("\nGroup Commands:")
+        print("  %groups     - List all private groups")
+        print("  %groupjoin  - Join a specific group")
+        print("  %grouppost  - Post a message to a group")
+        print("  %groupusers - List users in the specific group")
+        print("  %groupleave - Leave the specific group")
+        print("  %groupmessage - View a message in the specific group")
+
+    print("\n===========================================================")
+
+
+#This returns a list of all the commands available so that we can loop through them
+def get_available_commands(connected, inGroup):
+    """Return a list of available commands based on connection and group status."""
+    commands = ["%help", "%exit"]
+    
+    if not connected:
+        commands.append("%connect")
+    elif connected and not inGroup:
+        commands.extend(["%identify", "%join"])
+    else:
+        commands.extend([
+            "%identify", "%users", "%post", "%message", "%leave", 
+            "%groups", "%groupjoin", "%grouppost", "%groupusers", 
+            "%groupleave", "%groupmessage"
+        ])
+    
+    return commands
+
 def main():
     connected=False
     inGroup=False
     username = ""
     firstConnection = True
+    show_available_commands(connected, inGroup)
     while(True):
         #Request user to input a command, all of which start with %
-        print("Available commands:\n")
-        print("\t%exit\n")
-        if not connected:
-            print("\t%connect\n")
-        elif connected and not inGroup:
-            print("\t%identify\n")
-            print("\t%join\n")
-        else:
-            print("\t%identify\n")
-            print("\t%users\n")
-            print("\t%post\n")
-            print("\t%message\n")
-            print("\t%leave\n")
-            print(("\t%groups\n"))
-            print(("\t%groupjoin\n"))
-            print(("\t%grouppost\n"))
-            print(("\t%groupusers\n"))
-            print(("\t%groupleave\n"))
-            print(("\t%groupmessage\n"))
+        available_commands = get_available_commands(connected, inGroup)
+        print("\n-- %help for list of available commands --")
         cmnd = input("Enter a command: ")
         #Def a more efficient way to do this, but check to see if command is valid
-        while (cmnd != "%connect" and cmnd != "%exit" and cmnd != "%identify" and cmnd != "%join" and cmnd != "%leave" and cmnd != "%users" and cmnd != "%post" and cmnd != "%message" and cmnd != "%groups" and cmnd != "%groupjoin" and cmnd != "%grouppost" and cmnd != "%groupusers" and cmnd != "%groupleave" and cmnd != "%groupmessage"):
+        while cmnd not in available_commands:
                 if (cmnd == ""):
+                    print("-- %help for list of available commands --")
                     cmnd = input("Enter a command: ")
                 else:
                     cmnd = input("Command not recognized. Please enter a valid command: ")
@@ -108,6 +146,10 @@ def main():
         #Message for when user inputs connect command but is already connected
         elif (cmnd == "%connect" and connected):
             print("Already connected to a server. Use %exit if you wish to disconnect.")
+
+        #Help command since we don't want every command showing all the time
+        if (cmnd == "%help"):
+            show_available_commands(connected, inGroup)
         #Command for when user wants to depart entirely from the program
         if (cmnd == "%exit"):
             #If actively in a group, leave the group and disconnect from server
