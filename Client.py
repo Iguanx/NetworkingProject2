@@ -8,7 +8,9 @@ from datetime import datetime, timedelta
 
 def listen_to_server(client_socket):
     """
-    Continuously listen for incoming messages from the server.
+    @brief  Continuously listen for incoming messages from the server.
+
+    @param client_socket(socket): client socket
     """
     try:
         while True:
@@ -24,6 +26,11 @@ def listen_to_server(client_socket):
         client_socket.close()
 
 def wait(s):
+    """
+    @brief  Adds delay
+
+    @param s(int): seconds
+    """
     delay = timedelta(seconds=s)
     endtime = datetime.now() + delay
     while datetime.now() < endtime:
@@ -31,6 +38,13 @@ def wait(s):
 
 #This function is mainly used when collecting port input
 def get_positive_integer(Value):
+        """
+        @brief   checks user input for a positive integer
+
+        @param  Value(int)  int to be checked
+
+        @return integer
+        """
         while True:
             user_input = input(Value + ": ")
             if user_input.isdigit():  # Check if the input is composed of digits
@@ -39,6 +53,9 @@ def get_positive_integer(Value):
                     return number
             print("Invalid " + Value.lower() + ". Make sure to enter a positive integer.")
 def main():
+    """
+    @brief  Main function
+    """
     connected=False
     inGroup=False
     username = ""
