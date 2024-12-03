@@ -17,6 +17,7 @@ public class Server {
     private static final List<Message> messageList = new CopyOnWriteArrayList<>();
     private static final List<Group> groups = new CopyOnWriteArrayList<>();
 
+
     static {
         groups.add(new Group("Group1"));
         groups.add(new Group("Group2"));
@@ -248,12 +249,17 @@ public class Server {
                     if (targetGroup == null) {
                         output.println("Group not found: " + groupIdentifier);
                     } else {
-                        List<String> userIDs = targetGroup.getUserIDs();
-                        if (userIDs.isEmpty()) {
-                            output.println("No users currently in group: " + groupIdentifier);
+                        String username = userIDsServer.get(connectedClients.indexOf(clientSocket));
+                        if (!isUserInGroup(username, targetGroup)) {
+                            output.println("You are not a member of group: " + targetGroup.getGroupName());
                         } else {
-                            String IDlist = String.join(", ", userIDs);
-                            output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nUsers in group " + groupIdentifier + ": " + IDlist + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                            List<String> userIDs = targetGroup.getUserIDs();
+                            if (userIDs.isEmpty()) {
+                                output.println("No users currently in group: " + groupIdentifier);
+                            } else {
+                                String IDlist = String.join(", ", userIDs);
+                                output.println("\n~~~~~~~~~~~~~~~~~~~~~~\nUsers in group " + groupIdentifier + ": " + IDlist + "\n~~~~~~~~~~~~~~~~~~~~~~\n");
+                            }
                         }
                     }
                 }
