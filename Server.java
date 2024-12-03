@@ -1,5 +1,6 @@
 /*
 Network Project 2
+Connor, Nikita, Dominic
 Changing stuff here too
 Adding another line here as well
 */
@@ -16,7 +17,6 @@ public class Server {
     private static final List<String> userIDsServer = new CopyOnWriteArrayList<>();
     private static final List<Message> messageList = new CopyOnWriteArrayList<>();
     private static final List<Group> groups = new CopyOnWriteArrayList<>();
-
 
     static {
         groups.add(new Group("Group1"));
@@ -382,6 +382,24 @@ public class Server {
                         }
                     }
                 }
+                if (message.startsWith("%grouplist")) {
+                    String username = userIDsServer.get(connectedClients.indexOf(clientSocket));
+                    StringBuilder response = new StringBuilder("Groups you are part of:");
+                
+                    boolean isInAnyGroup = false;
+                    for (Group group : groups) {
+                        if (group.getUserIDs().contains(username)) {
+                            isInAnyGroup = true;
+                            response.append("\n").append(group.getGroupName());
+                        }
+                    }
+                
+                    if (!isInAnyGroup) {
+                        output.println("You are not part of any groups.");
+                    } else {
+                        output.println(response.toString());
+                    }
+                }                
                            
             }
             

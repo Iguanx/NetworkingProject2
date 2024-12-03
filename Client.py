@@ -1,5 +1,6 @@
 """
 Computer Networks Project 2
+Dominic, Nikita, Connor
 """
 
 import socket
@@ -80,6 +81,7 @@ def show_available_commands(connected, inGroup):
 
         print("\nGroup Commands:")
         print("  %groups     - List all private groups")
+        print("  %grouplist  - Lists all groups you're currently in")
         print("  %groupjoin  - Join a specific group")
         print("  %grouppost  - Post a message to a group")
         print("  %groupusers - List users in the specific group")
@@ -104,7 +106,7 @@ def get_available_commands(connected, inGroup):
         commands.extend([
             "%identify", "%users", "%post", "%message", "%leave", 
             "%groups", "%groupjoin", "%grouppost", "%groupusers", 
-            "%groupleave", "%groupmessage"
+            "%groupleave", "%groupmessage", "%grouplist"
         ])
     
     return commands
@@ -315,6 +317,12 @@ def main():
                 group = input("Enter group ID or name: ")
                 messageID = get_positive_integer("Enter message ID")
                 client_socket.sendall((f"%groupmessage {group} {messageID}\n").encode('utf-8'))
+                wait(1)
+        if cmnd == "%grouplist":
+            if not connected:
+                print("Must connect to server first.")
+            else:
+                client_socket.sendall(b"%grouplist\n")
                 wait(1)
 
 
